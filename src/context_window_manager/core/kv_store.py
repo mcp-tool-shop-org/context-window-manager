@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import abc
 import asyncio
+import contextlib
 import hashlib
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -19,12 +20,6 @@ from typing import TYPE_CHECKING, Any
 import aiofiles
 import aiofiles.os
 import structlog
-
-from context_window_manager.errors import (
-    KVStoreConnectionError,
-    KVStoreError,
-    KVStoreTimeoutError,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -519,7 +514,7 @@ class DiskKVStore(KVStoreBackend):
                 stored.append(block_hash)
                 total_bytes += len(data)
 
-            except (OSError, IOError) as e:
+            except OSError as e:
                 logger.warning(
                     "Failed to store block",
                     block_hash=block_hash,
@@ -560,7 +555,7 @@ class DiskKVStore(KVStoreBackend):
                 missing.append(block_hash)
                 async with self._lock:
                     self._metrics.misses += 1
-            except (OSError, IOError) as e:
+            except OSError as e:
                 logger.warning(
                     "Failed to retrieve block",
                     block_hash=block_hash,
@@ -597,14 +592,10 @@ class DiskKVStore(KVStoreBackend):
                     size = 0
 
                 # Delete files
-                try:
+                with contextlib.suppress(FileNotFoundError):
                     await aiofiles.os.remove(block_path)
-                except FileNotFoundError:
-                    pass
-                try:
+                with contextlib.suppress(FileNotFoundError):
                     await aiofiles.os.remove(meta_path)
-                except FileNotFoundError:
-                    pass
 
                 if size > 0:
                     async with self._lock:
@@ -612,7 +603,7 @@ class DiskKVStore(KVStoreBackend):
                         self._metrics.block_count -= 1
                     deleted += 1
 
-            except (OSError, IOError) as e:
+            except OSError as e:
                 logger.warning(
                     "Failed to delete block",
                     block_hash=block_hash,
@@ -735,7 +726,7 @@ class DiskKVStore(KVStoreBackend):
                 await f.write("ok")
             await aiofiles.os.remove(test_path)
             return True
-        except (OSError, IOError):
+        except OSError:
             return False
 
 
@@ -834,7 +825,7 @@ class TieredKVStore(KVStoreBackend):
             await self.hot_tier.delete(list(result.found.keys()))
 
             # Update access order
-            for h in result.found.keys():
+            for h in result.found:
                 if h in self._access_order:
                     self._access_order.remove(h)
 
@@ -888,7 +879,7 @@ class TieredKVStore(KVStoreBackend):
 
         # Update access order
         async with self._lock:
-            for h in found.keys():
+            for h in found:
                 if h in self._access_order:
                     self._access_order.remove(h)
                 self._access_order.append(h)

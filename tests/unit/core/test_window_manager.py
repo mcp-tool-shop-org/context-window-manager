@@ -6,8 +6,7 @@ Tests the orchestration layer for freeze/thaw operations.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -30,7 +29,6 @@ from context_window_manager.errors import (
     WindowAlreadyExistsError,
     WindowNotFoundError,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -246,13 +244,15 @@ class TestWindowManagerFreeze:
     async def test_freeze_invalid_state(self, window_manager, registry):
         """Should raise error when session is in invalid state."""
         # Create and delete a session
-        session = await registry.create_session("test-session", "model")
+        await registry.create_session("test-session", "model")
         await registry.update_session("test-session", state=SessionState.DELETED)
 
         with pytest.raises(InvalidStateTransitionError):
             await window_manager.freeze("test-session", "window")
 
-    async def test_freeze_stores_prompt_prefix(self, window_manager, registry, kv_store):
+    async def test_freeze_stores_prompt_prefix(
+        self, window_manager, registry, kv_store
+    ):
         """Should store the prompt prefix for later retrieval."""
         await registry.create_session("test-session", "model")
 
@@ -335,7 +335,9 @@ class TestWindowManagerThaw:
         with pytest.raises(WindowNotFoundError):
             await window_manager.thaw("nonexistent-window")
 
-    async def test_thaw_with_cache_warming(self, window_manager, registry, mock_vllm_client):
+    async def test_thaw_with_cache_warming(
+        self, window_manager, registry, mock_vllm_client
+    ):
         """Should warm cache when requested."""
         # Setup mock to return low prompt tokens (indicating cache hit)
         mock_vllm_client.generate = AsyncMock(
@@ -472,9 +474,14 @@ class TestThawEnhancements:
         )
 
         session = await registry.get_session(result.session_id)
-        assert session.metadata.get("continuation_prompt") == "Continue the conversation..."
+        assert (
+            session.metadata.get("continuation_prompt")
+            == "Continue the conversation..."
+        )
 
-    async def test_thaw_model_compatibility_check(self, window_manager, registry, mock_vllm_client):
+    async def test_thaw_model_compatibility_check(
+        self, window_manager, registry, mock_vllm_client
+    ):
         """Should check model compatibility and report warnings."""
         # Setup mock to return empty model list
         mock_vllm_client.list_models = AsyncMock(return_value=[])
@@ -490,7 +497,9 @@ class TestThawEnhancements:
         assert len(result.warnings) > 0
         assert any("No models available" in w for w in result.warnings)
 
-    async def test_thaw_model_compatibility_with_variant(self, window_manager, registry, mock_vllm_client):
+    async def test_thaw_model_compatibility_with_variant(
+        self, window_manager, registry, mock_vllm_client
+    ):
         """Should accept compatible model variants."""
         from context_window_manager.core.vllm_client import ModelInfo
 
@@ -512,7 +521,9 @@ class TestThawEnhancements:
     async def test_thaw_verify_stored_blocks(self, window_manager, registry, kv_store):
         """Should verify and report stored block counts."""
         await registry.create_session("original", "model", token_count=160)
-        await window_manager.freeze("original", "blocks-test", prompt_prefix="Test prompt")
+        await window_manager.freeze(
+            "original", "blocks-test", prompt_prefix="Test prompt"
+        )
 
         result = await window_manager.thaw("blocks-test", warm_cache=False)
 
@@ -520,7 +531,9 @@ class TestThawEnhancements:
         # With 160 tokens / 16 per block = 10 blocks expected
         assert result.blocks_expected == 10
 
-    async def test_thaw_cache_efficiency_calculation(self, window_manager, registry, mock_vllm_client):
+    async def test_thaw_cache_efficiency_calculation(
+        self, window_manager, registry, mock_vllm_client
+    ):
         """Should calculate cache efficiency from warming response."""
         # Setup mock to simulate partial cache hit (50% efficiency)
         mock_vllm_client.generate = AsyncMock(
@@ -554,7 +567,9 @@ class TestThawEnhancements:
         assert result.success is True
         assert any("warming" in w.lower() for w in result.warnings)
 
-    async def test_thaw_result_to_dict_includes_warnings(self, window_manager, registry):
+    async def test_thaw_result_to_dict_includes_warnings(
+        self, window_manager, registry
+    ):
         """ThawResult.to_dict should include warnings when present."""
         await registry.create_session("original", "model")
         await window_manager.freeze("original", "warnings-test")
@@ -612,7 +627,6 @@ class TestCloneResult:
 
     def test_to_dict_success(self):
         """Should convert successful result to dict."""
-        from context_window_manager.core.window_manager import CloneResult
 
         result = CloneResult(
             success=True,
@@ -635,7 +649,6 @@ class TestCloneResult:
 
     def test_to_dict_failure(self):
         """Should convert failed result to dict."""
-        from context_window_manager.core.window_manager import CloneResult
 
         result = CloneResult(
             success=False,
@@ -724,7 +737,9 @@ class TestWindowManagerClone:
         with pytest.raises(WindowAlreadyExistsError):
             await window_manager.clone("window-a", "window-b")
 
-    async def test_clone_inherits_tags_when_not_specified(self, window_manager, registry):
+    async def test_clone_inherits_tags_when_not_specified(
+        self, window_manager, registry
+    ):
         """Should inherit source tags when none specified."""
         await registry.create_session("original", "model")
         await window_manager.freeze(

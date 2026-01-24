@@ -6,19 +6,15 @@ Tests tool implementations, resources, and server lifecycle.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from context_window_manager.config import Settings, StorageConfig, VLLMConfig
-from context_window_manager.core.kv_store import CacheMetrics, MemoryKVStore
+from context_window_manager.core.kv_store import MemoryKVStore
 from context_window_manager.core.session_registry import (
-    Session,
     SessionRegistry,
     SessionState,
-    Window,
 )
 from context_window_manager.core.vllm_client import CacheStats, VLLMClient
 from context_window_manager.core.window_manager import (
@@ -33,7 +29,6 @@ from context_window_manager.errors import (
 )
 from context_window_manager.server import (
     ServerState,
-    _state,
     cache_stats,
     get_state,
     session_list,
@@ -43,7 +38,6 @@ from context_window_manager.server import (
     window_status,
     window_thaw,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -450,7 +444,7 @@ class TestSessionList:
     async def test_list_with_state_filter(self, patch_state):
         """Should filter by state."""
         await patch_state.registry.create_session("active1", "model")
-        s2 = await patch_state.registry.create_session("frozen1", "model")
+        await patch_state.registry.create_session("frozen1", "model")
         await patch_state.registry.update_session("frozen1", state=SessionState.FROZEN)
 
         result = await session_list(state_filter="frozen")

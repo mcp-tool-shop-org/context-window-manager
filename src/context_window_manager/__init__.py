@@ -11,7 +11,7 @@ __author__ = "AI Development Lab"
 from context_window_manager.config import Config, Settings
 
 __all__ = [
-    "__version__",
     "Config",
     "Settings",
+    "__version__",
 ]

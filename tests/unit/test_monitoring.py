@@ -7,7 +7,6 @@ Tests metrics collection, health checks, and performance tracing.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -203,6 +202,7 @@ class TestHealthChecker:
     @pytest.mark.asyncio
     async def test_register_and_check(self, checker):
         """Should register and run health checks."""
+
         async def healthy_check() -> ComponentHealth:
             return ComponentHealth(
                 name="test",
@@ -219,6 +219,7 @@ class TestHealthChecker:
     @pytest.mark.asyncio
     async def test_check_all_healthy(self, checker):
         """Should return healthy when all components are healthy."""
+
         async def healthy_check() -> ComponentHealth:
             return ComponentHealth(name="a", status=HealthStatus.HEALTHY)
 
@@ -232,6 +233,7 @@ class TestHealthChecker:
     @pytest.mark.asyncio
     async def test_check_all_degraded(self, checker):
         """Should return degraded when any component is degraded."""
+
         async def healthy() -> ComponentHealth:
             return ComponentHealth(name="a", status=HealthStatus.HEALTHY)
 
@@ -247,6 +249,7 @@ class TestHealthChecker:
     @pytest.mark.asyncio
     async def test_check_all_unhealthy(self, checker):
         """Should return unhealthy when any component is unhealthy."""
+
         async def healthy() -> ComponentHealth:
             return ComponentHealth(name="a", status=HealthStatus.HEALTHY)
 
@@ -262,6 +265,7 @@ class TestHealthChecker:
     @pytest.mark.asyncio
     async def test_check_timeout(self, checker):
         """Should handle check timeouts."""
+
         async def slow_check() -> ComponentHealth:
             await asyncio.sleep(10)  # Will timeout
             return ComponentHealth(name="slow", status=HealthStatus.HEALTHY)
@@ -280,6 +284,7 @@ class TestHealthChecker:
     @pytest.mark.asyncio
     async def test_readiness_healthy(self, checker):
         """Readiness should return True when healthy."""
+
         async def healthy() -> ComponentHealth:
             return ComponentHealth(name="a", status=HealthStatus.HEALTHY)
 
@@ -289,6 +294,7 @@ class TestHealthChecker:
     @pytest.mark.asyncio
     async def test_readiness_unhealthy(self, checker):
         """Readiness should return False when unhealthy."""
+
         async def unhealthy() -> ComponentHealth:
             return ComponentHealth(name="a", status=HealthStatus.UNHEALTHY)
 

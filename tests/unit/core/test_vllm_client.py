@@ -6,8 +6,7 @@ Tests HTTP communication, retry logic, and response parsing.
 
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
@@ -281,7 +280,7 @@ class TestVLLMClientWithMockedRequest:
             "model": "llama-3.1-8b",
         }
 
-        with patch.object(client, "_request", return_value=mock_response) as mock_req:
+        with patch.object(client, "_request", return_value=mock_response):
             result = await client.generate(
                 "Test prompt",
                 "llama-3.1-8b",
@@ -362,7 +361,7 @@ class TestVLLMClientErrors:
         # Create a mock session
         mock_session = MagicMock()
         mock_cm = MagicMock()
-        mock_cm.__aenter__ = AsyncMock(side_effect=asyncio.TimeoutError())
+        mock_cm.__aenter__ = AsyncMock(side_effect=TimeoutError())
         mock_cm.__aexit__ = AsyncMock(return_value=None)
         mock_session.request.return_value = mock_cm
 

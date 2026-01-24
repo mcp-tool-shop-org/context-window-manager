@@ -7,9 +7,9 @@ Handles connection pooling, retries, cache_salt injection, and error handling.
 
 from __future__ import annotations
 
-import asyncio
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+import contextlib
+from dataclasses import dataclass
+from typing import Any
 
 import aiohttp
 import structlog
@@ -25,9 +25,6 @@ from context_window_manager.errors import (
     VLLMConnectionError,
     VLLMTimeoutError,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
 
 logger = structlog.get_logger()
 
@@ -115,15 +112,11 @@ class CacheStats:
             if line.startswith("#"):
                 continue
             if "prefix_cache_hit_rate" in line:
-                try:
+                with contextlib.suppress(ValueError, IndexError):
                     stats.hit_rate = float(line.split()[-1])
-                except (ValueError, IndexError):
-                    pass
             elif "prefix_cache_num_cached_tokens" in line:
-                try:
+                with contextlib.suppress(ValueError, IndexError):
                     stats.num_cached_tokens = int(float(line.split()[-1]))
-                except (ValueError, IndexError):
-                    pass
 
         return stats
 
@@ -236,9 +229,7 @@ class VLLMClient:
         log = logger.bind(method=method, url=url)
 
         try:
-            request_timeout = (
-                aiohttp.ClientTimeout(total=timeout) if timeout else None
-            )
+            request_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else None
 
             async with session.request(
                 method,
@@ -275,7 +266,7 @@ class VLLMClient:
                 else:
                     return await response.text()
 
-        except asyncio.TimeoutError as e:
+        except TimeoutError as e:
             log.warning("vLLM request timeout", timeout=timeout or self.config.timeout)
             raise VLLMTimeoutError(timeout or self.config.timeout) from e
 

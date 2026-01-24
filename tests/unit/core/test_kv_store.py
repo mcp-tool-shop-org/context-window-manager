@@ -6,9 +6,6 @@ Tests MemoryKVStore, DiskKVStore, and TieredKVStore backends.
 
 from __future__ import annotations
 
-import asyncio
-from pathlib import Path
-
 import pytest
 
 from context_window_manager.core.kv_store import (
@@ -289,9 +286,7 @@ class TestMemoryKVStore:
 
     async def test_list_blocks_with_limit(self, store):
         """Should respect limit parameter."""
-        await store.store(
-            {"hash1": b"d1", "hash2": b"d2", "hash3": b"d3"}, "session-1"
-        )
+        await store.store({"hash1": b"d1", "hash2": b"d2", "hash3": b"d3"}, "session-1")
 
         blocks = await store.list_blocks(limit=2)
         assert len(blocks) == 2
@@ -445,8 +440,8 @@ class TestTieredKVStore:
         await tiered_store.store({"h4": b"d4"}, "s1")  # Should trigger demotion
 
         # h1 should have been demoted (oldest)
-        hot_result = await tiered_store.hot_tier.exists(["h1"])
-        warm_result = await tiered_store.warm_tier.exists(["h1"])
+        await tiered_store.hot_tier.exists(["h1"])
+        await tiered_store.warm_tier.exists(["h1"])
 
         # Either in warm or still retrievable through tiered
         result = await tiered_store.retrieve(["h1"])
