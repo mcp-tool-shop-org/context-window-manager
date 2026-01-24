@@ -48,7 +48,6 @@ from context_window_manager.errors import (
     ErrorContext,
     SessionNotFoundError,
     WindowNotFoundError,
-    format_user_message,
 )
 from context_window_manager.monitoring import (
     HealthChecker,
@@ -56,7 +55,6 @@ from context_window_manager.monitoring import (
     check_registry_health,
     check_vllm_health,
     get_metrics,
-    trace_operation,
 )
 
 if TYPE_CHECKING:
@@ -145,15 +143,9 @@ async def lifespan(app: FastMCP) -> AsyncIterator[None]:
 
     # Create the HealthChecker and register component checks
     health_checker = HealthChecker(version="0.6.0")
-    health_checker.register_check(
-        "kv_store", lambda: check_kv_store_health(kv_store)
-    )
-    health_checker.register_check(
-        "vllm", lambda: check_vllm_health(vllm_client)
-    )
-    health_checker.register_check(
-        "registry", lambda: check_registry_health(registry)
-    )
+    health_checker.register_check("kv_store", lambda: check_kv_store_health(kv_store))
+    health_checker.register_check("vllm", lambda: check_vllm_health(vllm_client))
+    health_checker.register_check("registry", lambda: check_registry_health(registry))
 
     _state = ServerState(
         settings=settings,
@@ -668,7 +660,9 @@ async def window_delete(
         window_name=window_name,
         delete_blocks=delete_blocks,
     ):
-        logger.info("Deleting window", window_name=window_name, delete_blocks=delete_blocks)
+        logger.info(
+            "Deleting window", window_name=window_name, delete_blocks=delete_blocks
+        )
 
         window = await state.registry.get_window(window_name)
         if not window:
@@ -997,7 +991,9 @@ async def list_sessions_resource() -> str:
 
     lines = ["# Active Sessions\n"]
     for s in sessions:
-        lines.append(f"- **{s.id}** ({s.state.value}): {s.model}, {s.token_count} tokens")
+        lines.append(
+            f"- **{s.id}** ({s.state.value}): {s.model}, {s.token_count} tokens"
+        )
 
     return "\n".join(lines)
 
@@ -1011,7 +1007,9 @@ async def list_windows_resource() -> str:
     lines = ["# Saved Windows\n"]
     for w in windows:
         tags_str = ", ".join(w.tags) if w.tags else "none"
-        lines.append(f"- **{w.name}**: {w.description or 'No description'} (tags: {tags_str})")
+        lines.append(
+            f"- **{w.name}**: {w.description or 'No description'} (tags: {tags_str})"
+        )
 
     return "\n".join(lines)
 
@@ -1045,8 +1043,16 @@ async def health_status_resource() -> str:
     lines.append("## Components\n")
 
     for component in health.components:
-        emoji = "✅" if component.status.value == "healthy" else "⚠️" if component.status.value == "degraded" else "❌"
-        lines.append(f"- {emoji} **{component.name}**: {component.status.value} ({component.latency_ms:.1f}ms)")
+        emoji = (
+            "✅"
+            if component.status.value == "healthy"
+            else "⚠️"
+            if component.status.value == "degraded"
+            else "❌"
+        )
+        lines.append(
+            f"- {emoji} **{component.name}**: {component.status.value} ({component.latency_ms:.1f}ms)"
+        )
         if component.message:
             lines.append(f"  - {component.message}")
 

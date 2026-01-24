@@ -7,14 +7,14 @@ and end-to-end tests.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
 if TYPE_CHECKING:
-    from context_window_manager.config import Settings
+    from pathlib import Path
+    pass
 
 
 # =============================================================================

@@ -6,7 +6,7 @@ Tests session and window management, state transitions, and SQLite operations.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -47,8 +47,8 @@ class TestSession:
             cache_salt="abc123",
             state=SessionState.ACTIVE,
             token_count=1000,
-            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
-            updated_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            created_at=datetime(2026, 1, 1, tzinfo=UTC),
+            updated_at=datetime(2026, 1, 2, tzinfo=UTC),
             metadata={"key": "value"},
         )
 
@@ -96,7 +96,7 @@ class TestWindow:
             block_hashes=["h1", "h2", "h3"],
             block_count=3,
             token_count=500,
-            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            created_at=datetime(2026, 1, 1, tzinfo=UTC),
             tags=["important", "test"],
         )
 
@@ -327,17 +327,19 @@ class TestSessionRegistry:
         await registry.create_window(Window(name="w1", session_id="s1"))
         await registry.create_window(Window(name="w2", session_id="s2"))
 
-        windows, total = await registry.list_windows(session_id="s1")
+        windows, _total = await registry.list_windows(session_id="s1")
         assert len(windows) == 1
         assert windows[0].session_id == "s1"
 
     async def test_list_windows_by_tags(self, registry):
         """Should filter windows by tags."""
         await registry.create_session("s1", "model")
-        await registry.create_window(Window(name="w1", session_id="s1", tags=["important"]))
+        await registry.create_window(
+            Window(name="w1", session_id="s1", tags=["important"])
+        )
         await registry.create_window(Window(name="w2", session_id="s1", tags=["draft"]))
 
-        windows, total = await registry.list_windows(tags=["important"])
+        windows, _total = await registry.list_windows(tags=["important"])
         assert len(windows) == 1
         assert windows[0].name == "w1"
 
@@ -361,9 +363,7 @@ class TestSessionRegistry:
         import asyncio
 
         # Create multiple sessions concurrently
-        tasks = [
-            registry.create_session(f"session-{i}", "model") for i in range(10)
-        ]
+        tasks = [registry.create_session(f"session-{i}", "model") for i in range(10)]
         sessions = await asyncio.gather(*tasks)
 
         assert len(sessions) == 10

@@ -286,7 +286,7 @@ class TestClassifyError:
 
     def test_file_not_found_to_storage_read(self):
         """FileNotFoundError should map to StorageReadError."""
-        from context_window_manager.errors import classify_error, StorageReadError
+        from context_window_manager.errors import StorageReadError, classify_error
 
         result = classify_error(FileNotFoundError("missing.txt"))
         assert isinstance(result, StorageReadError)
@@ -294,7 +294,7 @@ class TestClassifyError:
 
     def test_permission_error_to_access_denied(self):
         """PermissionError should map to AccessDeniedError."""
-        from context_window_manager.errors import classify_error, AccessDeniedError
+        from context_window_manager.errors import AccessDeniedError, classify_error
 
         perm_error = PermissionError("Access denied")
         perm_error.filename = "/etc/secret"
@@ -303,21 +303,21 @@ class TestClassifyError:
 
     def test_memory_error_to_memory_exhausted(self):
         """MemoryError should map to MemoryExhaustedError."""
-        from context_window_manager.errors import classify_error, MemoryExhaustedError
+        from context_window_manager.errors import MemoryExhaustedError, classify_error
 
         result = classify_error(MemoryError())
         assert isinstance(result, MemoryExhaustedError)
 
     def test_timeout_keyword_to_operation_timeout(self):
         """Errors with 'timeout' in message should map to OperationTimeoutError."""
-        from context_window_manager.errors import classify_error, OperationTimeoutError
+        from context_window_manager.errors import OperationTimeoutError, classify_error
 
         result = classify_error(Exception("Request timeout exceeded"))
         assert isinstance(result, OperationTimeoutError)
 
     def test_unknown_error_to_internal(self):
         """Unknown exceptions should become InternalError."""
-        from context_window_manager.errors import classify_error, InternalError
+        from context_window_manager.errors import InternalError, classify_error
 
         result = classify_error(RuntimeError("Something weird happened"))
         assert isinstance(result, InternalError)
@@ -329,7 +329,11 @@ class TestIsRetryable:
 
     def test_cwm_error_uses_retryable_flag(self):
         """CWMError instances should use their retryable attribute."""
-        from context_window_manager.errors import is_retryable, VLLMConnectionError, SessionNotFoundError
+        from context_window_manager.errors import (
+            SessionNotFoundError,
+            VLLMConnectionError,
+            is_retryable,
+        )
 
         # VLLMConnectionError is retryable
         assert is_retryable(VLLMConnectionError("http://localhost:8000")) is True
@@ -342,7 +346,9 @@ class TestIsRetryable:
         from context_window_manager.errors import is_retryable
 
         assert is_retryable(Exception("Connection timeout")) is True
-        assert is_retryable(Exception("Request timed out")) is False  # 'timeout' must be full word match
+        assert (
+            is_retryable(Exception("Request timed out")) is False
+        )  # 'timeout' must be full word match
 
     def test_connection_pattern_is_retryable(self):
         """Errors with 'connection' should be retryable."""
@@ -413,7 +419,10 @@ class TestFormatUserMessage:
 
     def test_validation_error_message(self):
         """Validation errors should have helpful messages."""
-        from context_window_manager.errors import format_user_message, InvalidSessionIdError
+        from context_window_manager.errors import (
+            InvalidSessionIdError,
+            format_user_message,
+        )
 
         error = InvalidSessionIdError("bad!@#id")
         msg = format_user_message(error)
@@ -483,7 +492,9 @@ class TestErrorContext:
         from context_window_manager.errors import ErrorContext, InternalError
 
         with pytest.raises(InternalError) as exc_info:
-            async with ErrorContext("custom_op", user_id="user-1", request_id="req-123"):
+            async with ErrorContext(
+                "custom_op", user_id="user-1", request_id="req-123"
+            ):
                 raise RuntimeError("Something failed")
 
         error = exc_info.value
@@ -495,6 +506,7 @@ class TestErrorContext:
     async def test_logger_called_on_error(self):
         """Logger should be called when error occurs."""
         from unittest.mock import MagicMock
+
         from context_window_manager.errors import ErrorContext
 
         mock_logger = MagicMock()

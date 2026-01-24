@@ -17,12 +17,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Awaitable
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
 logger = structlog.get_logger()
 
@@ -210,32 +210,34 @@ class MetricsCollector:
                 if values:
                     # Compute histogram statistics
                     sorted_vals = sorted(values)
-                    metrics.extend([
-                        MetricValue(
-                            name=f"{name}_count",
-                            value=len(values),
-                            labels=self._labels.get(key, {}),
-                            metric_type="counter",
-                        ),
-                        MetricValue(
-                            name=f"{name}_sum",
-                            value=sum(values),
-                            labels=self._labels.get(key, {}),
-                            metric_type="counter",
-                        ),
-                        MetricValue(
-                            name=f"{name}_p50",
-                            value=sorted_vals[len(sorted_vals) // 2],
-                            labels=self._labels.get(key, {}),
-                            metric_type="gauge",
-                        ),
-                        MetricValue(
-                            name=f"{name}_p99",
-                            value=sorted_vals[int(len(sorted_vals) * 0.99)],
-                            labels=self._labels.get(key, {}),
-                            metric_type="gauge",
-                        ),
-                    ])
+                    metrics.extend(
+                        [
+                            MetricValue(
+                                name=f"{name}_count",
+                                value=len(values),
+                                labels=self._labels.get(key, {}),
+                                metric_type="counter",
+                            ),
+                            MetricValue(
+                                name=f"{name}_sum",
+                                value=sum(values),
+                                labels=self._labels.get(key, {}),
+                                metric_type="counter",
+                            ),
+                            MetricValue(
+                                name=f"{name}_p50",
+                                value=sorted_vals[len(sorted_vals) // 2],
+                                labels=self._labels.get(key, {}),
+                                metric_type="gauge",
+                            ),
+                            MetricValue(
+                                name=f"{name}_p99",
+                                value=sorted_vals[int(len(sorted_vals) * 0.99)],
+                                labels=self._labels.get(key, {}),
+                                metric_type="gauge",
+                            ),
+                        ]
+                    )
 
             return metrics
 
@@ -326,7 +328,11 @@ async def trace_operation(
             logger.info(
                 f"Operation completed: {operation}",
                 elapsed_ms=round(elapsed_ms, 2),
-                **{k: v for k, v in trace_data.items() if k not in ("start_time", "elapsed_ms", "success")},
+                **{
+                    k: v
+                    for k, v in trace_data.items()
+                    if k not in ("start_time", "elapsed_ms", "success")
+                },
             )
 
     except Exception as e:
@@ -365,6 +371,7 @@ def trace_method(operation: str | None = None):
         async def freeze(self, ...):
             ...
     """
+
     def decorator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         op_name = operation or func.__name__
 
@@ -420,7 +427,7 @@ class HealthChecker:
             result = await asyncio.wait_for(self._checks[name](), timeout=5.0)
             result.latency_ms = (time.perf_counter() - start) * 1000
             return result
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return ComponentHealth(
                 name=name,
                 status=HealthStatus.UNHEALTHY,

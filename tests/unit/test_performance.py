@@ -7,7 +7,6 @@ Tests connection pooling, concurrency control, caching, and memory management.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -105,6 +104,7 @@ class TestPooledConnection:
     @pytest.mark.asyncio
     async def test_acquires_and_releases(self):
         """Should acquire on enter and release on exit."""
+
         async def factory():
             return {"id": 1}
 
@@ -192,9 +192,7 @@ class TestAsyncBatcher:
         )
 
         # Submit items quickly to get batched
-        results = await asyncio.gather(*[
-            batcher.submit(i) for i in range(3)
-        ])
+        results = await asyncio.gather(*[batcher.submit(i) for i in range(3)])
 
         assert results == ["result-0", "result-1", "result-2"]
         assert len(batches) == 1  # All in one batch
@@ -291,7 +289,7 @@ class TestAsyncCache:
         await cache.get("key1")  # hit
         await cache.get("key2")  # miss
 
-        assert cache.hit_rate == 2/3
+        assert cache.hit_rate == 2 / 3
 
     @pytest.mark.asyncio
     async def test_stats(self, cache):

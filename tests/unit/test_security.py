@@ -242,15 +242,11 @@ class TestVerifyCacheSaltOwnership:
 
     def test_valid_ownership(self):
         """Should verify valid cache salt ownership."""
-        assert verify_cache_salt_ownership(
-            "session-123", "session-123-abc123-salt"
-        )
+        assert verify_cache_salt_ownership("session-123", "session-123-abc123-salt")
 
     def test_invalid_ownership(self):
         """Should reject invalid cache salt ownership."""
-        assert not verify_cache_salt_ownership(
-            "session-123", "session-456-abc123-salt"
-        )
+        assert not verify_cache_salt_ownership("session-123", "session-456-abc123-salt")
 
     def test_empty_cache_salt(self):
         """Should reject empty cache salt."""

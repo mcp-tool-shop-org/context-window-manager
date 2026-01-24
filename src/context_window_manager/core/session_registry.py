@@ -13,25 +13,21 @@ from __future__ import annotations
 import hashlib
 import json
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import aiosqlite
 import structlog
 
 from context_window_manager.errors import (
     InvalidStateTransitionError,
-    SessionAlreadyFrozenError,
     SessionNotFoundError,
     ValidationError,
     WindowAlreadyExistsError,
     WindowNotFoundError,
 )
-
-if TYPE_CHECKING:
-    pass
 
 logger = structlog.get_logger()
 
@@ -53,9 +49,17 @@ class SessionState(str, Enum):
 
 # Valid state transitions
 STATE_TRANSITIONS: dict[SessionState, set[SessionState]] = {
-    SessionState.ACTIVE: {SessionState.FROZEN, SessionState.EXPIRED, SessionState.DELETED},
+    SessionState.ACTIVE: {
+        SessionState.FROZEN,
+        SessionState.EXPIRED,
+        SessionState.DELETED,
+    },
     SessionState.FROZEN: {SessionState.THAWED, SessionState.DELETED},
-    SessionState.THAWED: {SessionState.ACTIVE, SessionState.FROZEN, SessionState.DELETED},
+    SessionState.THAWED: {
+        SessionState.ACTIVE,
+        SessionState.FROZEN,
+        SessionState.DELETED,
+    },
     SessionState.EXPIRED: {SessionState.DELETED},
     SessionState.DELETED: set(),  # Terminal state
 }
@@ -81,7 +85,7 @@ class Session:
         self.model = model
         self.token_count = token_count
         self.cache_salt = cache_salt
-        self.created_at = created_at or datetime.now(timezone.utc)
+        self.created_at = created_at or datetime.now(UTC)
         self.updated_at = updated_at or self.created_at
         self.frozen_at = frozen_at
         self.metadata = metadata or {}
@@ -109,9 +113,15 @@ class Session:
             model=row["model"],
             token_count=row["token_count"],
             cache_salt=row["cache_salt"],
-            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
-            updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None,
-            frozen_at=datetime.fromisoformat(row["frozen_at"]) if row["frozen_at"] else None,
+            created_at=datetime.fromisoformat(row["created_at"])
+            if row["created_at"]
+            else None,
+            updated_at=datetime.fromisoformat(row["updated_at"])
+            if row["updated_at"]
+            else None,
+            frozen_at=datetime.fromisoformat(row["frozen_at"])
+            if row["frozen_at"]
+            else None,
             metadata=json.loads(row["metadata"]) if row["metadata"] else {},
         )
 
@@ -142,7 +152,7 @@ class Window:
         self.total_size_bytes = total_size_bytes
         self.model = model
         self.token_count = token_count
-        self.created_at = created_at or datetime.now(timezone.utc)
+        self.created_at = created_at or datetime.now(UTC)
         self.parent_window = parent_window
 
     def to_dict(self) -> dict[str, Any]:
@@ -174,7 +184,9 @@ class Window:
             total_size_bytes=row["total_size_bytes"],
             model=row["model"],
             token_count=row["token_count"],
-            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
+            created_at=datetime.fromisoformat(row["created_at"])
+            if row["created_at"]
+            else None,
             parent_window=row["parent_window"],
         )
 
@@ -388,7 +400,7 @@ class SessionRegistry:
         if cache_salt is None:
             cache_salt = generate_cache_salt(session_id)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         session = Session(
             id=session_id,
             state=SessionState.ACTIVE,
@@ -511,7 +523,7 @@ class SessionRegistry:
         if metadata is not None:
             session.metadata.update(metadata)
 
-        session.updated_at = datetime.now(timezone.utc)
+        session.updated_at = datetime.now(UTC)
 
         await self._db.execute(
             """
@@ -532,7 +544,7 @@ class SessionRegistry:
 
         if state is not None:
             await self._audit_log(
-                f"SESSION_STATE_CHANGE",
+                "SESSION_STATE_CHANGE",
                 session_id=session_id,
                 details={"new_state": state.value},
             )
@@ -644,7 +656,7 @@ class SessionRegistry:
         if existing:
             raise WindowAlreadyExistsError(window.name)
 
-        window.created_at = window.created_at or datetime.now(timezone.utc)
+        window.created_at = window.created_at or datetime.now(UTC)
 
         await self._db.execute(
             """
@@ -673,7 +685,10 @@ class SessionRegistry:
             "WINDOW_CREATE",
             window_name=window.name,
             session_id=window.session_id,
-            details={"token_count": window.token_count, "block_count": window.block_count},
+            details={
+                "token_count": window.token_count,
+                "block_count": window.block_count,
+            },
         )
         logger.info(
             "Window created",
@@ -898,14 +913,16 @@ class SessionRegistry:
         entries = []
         async with self._db.execute(query, params) as cursor:
             async for row in cursor:
-                entries.append({
-                    "id": row["id"],
-                    "timestamp": row["timestamp"],
-                    "event": row["event"],
-                    "session_id": row["session_id"],
-                    "window_name": row["window_name"],
-                    "details": json.loads(row["details"]) if row["details"] else {},
-                    "severity": row["severity"],
-                })
+                entries.append(
+                    {
+                        "id": row["id"],
+                        "timestamp": row["timestamp"],
+                        "event": row["event"],
+                        "session_id": row["session_id"],
+                        "window_name": row["window_name"],
+                        "details": json.loads(row["details"]) if row["details"] else {},
+                        "severity": row["severity"],
+                    }
+                )
 
         return entries

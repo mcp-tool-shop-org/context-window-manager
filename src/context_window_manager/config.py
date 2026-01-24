@@ -33,7 +33,9 @@ class StorageConfig(BaseSettings):
 
     # CPU tier
     enable_cpu: bool = Field(default=True, description="Enable CPU memory storage tier")
-    cpu_max_gb: float = Field(default=8.0, description="Maximum CPU memory for KV cache (GB)")
+    cpu_max_gb: float = Field(
+        default=8.0, description="Maximum CPU memory for KV cache (GB)"
+    )
 
     # Disk tier
     enable_disk: bool = Field(default=True, description="Enable disk storage tier")
@@ -42,10 +44,14 @@ class StorageConfig(BaseSettings):
         description="Path for disk storage",
     )
     disk_max_gb: float = Field(default=50.0, description="Maximum disk storage (GB)")
-    compression: bool = Field(default=True, description="Enable compression for disk storage")
+    compression: bool = Field(
+        default=True, description="Enable compression for disk storage"
+    )
 
     # Redis tier (optional)
-    redis_url: str | None = Field(default=None, description="Redis URL for distributed storage")
+    redis_url: str | None = Field(
+        default=None, description="Redis URL for distributed storage"
+    )
     redis_prefix: str = Field(default="cwm:", description="Redis key prefix")
 
     @field_validator("disk_path", mode="before")
@@ -61,8 +67,12 @@ class VLLMConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CWM_VLLM_")
 
     url: str = Field(default="http://localhost:8000", description="vLLM server URL")
-    timeout: float = Field(default=60.0, ge=0.1, description="Request timeout in seconds")
-    max_connections: int = Field(default=10, ge=1, description="Maximum concurrent connections")
+    timeout: float = Field(
+        default=60.0, ge=0.1, description="Request timeout in seconds"
+    )
+    max_connections: int = Field(
+        default=10, ge=1, description="Maximum concurrent connections"
+    )
     verify_ssl: bool = Field(default=True, description="Verify SSL certificates")
     api_key: str | None = Field(default=None, description="API key if required")
 
@@ -72,12 +82,22 @@ class SecurityConfig(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="CWM_SECURITY_")
 
-    encryption_at_rest: bool = Field(default=False, description="Encrypt stored KV blocks")
-    encryption_key_file: Path | None = Field(default=None, description="Path to encryption key")
-    require_tls: bool = Field(default=True, description="Require TLS for remote connections")
-    enable_cache_salt: bool = Field(default=True, description="Enable session isolation via cache_salt")
+    encryption_at_rest: bool = Field(
+        default=False, description="Encrypt stored KV blocks"
+    )
+    encryption_key_file: Path | None = Field(
+        default=None, description="Path to encryption key"
+    )
+    require_tls: bool = Field(
+        default=True, description="Require TLS for remote connections"
+    )
+    enable_cache_salt: bool = Field(
+        default=True, description="Enable session isolation via cache_salt"
+    )
     audit_log_path: Path | None = Field(default=None, description="Path for audit logs")
-    audit_log_retention_days: int = Field(default=90, description="Audit log retention period")
+    audit_log_retention_days: int = Field(
+        default=90, description="Audit log retention period"
+    )
 
 
 class ResourceLimits(BaseSettings):
@@ -85,11 +105,17 @@ class ResourceLimits(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="CWM_LIMITS_")
 
-    max_context_tokens: int = Field(default=128_000, description="Maximum context size in tokens")
+    max_context_tokens: int = Field(
+        default=128_000, description="Maximum context size in tokens"
+    )
     max_sessions: int = Field(default=100, description="Maximum concurrent sessions")
     max_windows: int = Field(default=1000, description="Maximum stored windows")
-    max_storage_gb: float = Field(default=100.0, description="Maximum total storage (GB)")
-    rate_limit_per_minute: int = Field(default=60, description="Rate limit for operations")
+    max_storage_gb: float = Field(
+        default=100.0, description="Maximum total storage (GB)"
+    )
+    rate_limit_per_minute: int = Field(
+        default=60, description="Rate limit for operations"
+    )
 
 
 class Settings(BaseSettings):

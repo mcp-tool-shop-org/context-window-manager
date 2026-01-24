@@ -530,7 +530,10 @@ def classify_error(error: Exception) -> CWMError:
     if isinstance(error, FileNotFoundError):
         return StorageReadError(f"File not found: {error_msg}")
     if isinstance(error, PermissionError):
-        return AccessDeniedError("file_operation", str(error.filename) if hasattr(error, "filename") else "unknown")
+        return AccessDeniedError(
+            "file_operation",
+            str(error.filename) if hasattr(error, "filename") else "unknown",
+        )
     if isinstance(error, (OSError, IOError)):
         return StorageError.__class__(f"I/O error: {error_msg}")
     if isinstance(error, MemoryError):
@@ -571,7 +574,7 @@ def get_retry_delay(error: Exception, attempt: int, base_delay: float = 1.0) -> 
     import random
 
     # Exponential backoff with jitter
-    delay = base_delay * (2 ** attempt)
+    delay = base_delay * (2**attempt)
     # Add 0-25% jitter
     jitter = delay * random.uniform(0, 0.25)
     return min(delay + jitter, 60.0)  # Cap at 60 seconds

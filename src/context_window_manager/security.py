@@ -11,8 +11,8 @@ Provides:
 from __future__ import annotations
 
 import re
-from datetime import datetime
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Any
 
@@ -243,9 +243,7 @@ def _contains_injection_patterns(value: str) -> bool:
         return True
     if SHELL_INJECTION_PATTERN.search(value):
         return True
-    if SQL_INJECTION_PATTERN.search(value):
-        return True
-    return False
+    return bool(SQL_INJECTION_PATTERN.search(value))
 
 
 # =============================================================================
@@ -320,10 +318,7 @@ def verify_cache_salt_ownership(
         )
         return False
 
-    if expected_prefix and not cache_salt.startswith(expected_prefix):
-        return False
-
-    return True
+    return not (expected_prefix and not cache_salt.startswith(expected_prefix))
 
 
 # =============================================================================

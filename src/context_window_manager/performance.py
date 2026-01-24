@@ -11,16 +11,16 @@ Provides:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import functools
 import time
-import weakref
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import structlog
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable
 
 logger = structlog.get_logger()
 
@@ -99,9 +99,7 @@ class ConnectionPool(Generic[T]):
             conn, timestamp = self._pool.get_nowait()
 
             # Check if connection is still valid
-            if time.time() - timestamp > self.config.max_idle_time:
-                await self._close_connection(conn)
-            elif self.validator and not await self.validator(conn):
+            if time.time() - timestamp > self.config.max_idle_time or (self.validator and not await self.validator(conn)):
                 await self._close_connection(conn)
             else:
                 return conn
@@ -279,12 +277,15 @@ def limit_concurrency(limiter: ConcurrencyLimiter):
         async def my_function():
             ...
     """
+
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs) -> T:
             async with limiter:
                 return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -372,7 +373,7 @@ class AsyncBatcher(Generic[T]):
 
         try:
             results = await self._batch_handler(items)
-            for future, result in zip(futures, results):
+            for future, result in zip(futures, results, strict=False):
                 future.set_result(result)
         except Exception as e:
             for future in futures:
@@ -447,9 +448,7 @@ class AsyncCache(Generic[T]):
             self._hits += 1
             return entry.value
 
-    async def set(
-        self, key: str, value: T, ttl: float | None = None
-    ) -> None:
+    async def set(self, key: str, value: T, ttl: float | None = None) -> None:
         """
         Set a value in cache.
 
@@ -552,6 +551,7 @@ def cached(
         async def expensive_operation(id: str):
             ...
     """
+
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs) -> T:
@@ -572,6 +572,7 @@ def cached(
             return result
 
         return wrapper
+
     return decorator
 
 
@@ -672,10 +673,8 @@ class MemoryPressureHandler:
         self._running = False
         if self._monitor_task:
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
 
     async def _monitor_loop(self) -> None:
         """Main monitoring loop."""

@@ -28,7 +28,7 @@ from __future__ import annotations
 import hashlib
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -40,16 +40,15 @@ from context_window_manager.core.session_registry import (
     SessionState,
     Window,
 )
-from context_window_manager.core.vllm_client import VLLMClient
 from context_window_manager.errors import (
     InvalidStateTransitionError,
-    ModelNotAvailableError,
     SessionNotFoundError,
     WindowAlreadyExistsError,
     WindowNotFoundError,
 )
 
 if TYPE_CHECKING:
+    from context_window_manager.core.vllm_client import VLLMClient
     pass
 
 logger = structlog.get_logger()
@@ -284,7 +283,7 @@ class WindowManager:
 
         # Store block metadata in our KV store for tracking
         # (LMCache handles actual block persistence)
-        block_metadata = await self._store_block_metadata(
+        await self._store_block_metadata(
             window_name=window_name,
             cache_info=cache_info,
         )
@@ -311,7 +310,7 @@ class WindowManager:
         await self.registry.update_session(
             session_id,
             state=SessionState.FROZEN,
-            frozen_at=datetime.now(timezone.utc),
+            frozen_at=datetime.now(UTC),
         )
 
         log.info(
@@ -386,7 +385,7 @@ class WindowManager:
 
         # Generate session ID if not provided
         if not new_session_id:
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
             new_session_id = f"thaw-{window_name}-{timestamp}"
 
         # Get the original cache_salt for cache restoration
@@ -404,10 +403,12 @@ class WindowManager:
             token_count=window.token_count,
             metadata={
                 "source_window": window_name,
-                "thawed_at": datetime.now(timezone.utc).isoformat(),
+                "thawed_at": datetime.now(UTC).isoformat(),
                 "original_session_id": window.session_id,
                 "original_cache_salt": original_cache_salt,
-                "continuation_prompt": continuation_prompt if continuation_prompt else None,
+                "continuation_prompt": continuation_prompt
+                if continuation_prompt
+                else None,
             },
         )
 
@@ -644,7 +645,7 @@ class WindowManager:
             "token_count": cache_info.token_count,
             "block_count": cache_info.block_count,
             "block_hashes": cache_info.block_hashes,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         # Store as dict of blocks (KV store API)
@@ -737,7 +738,9 @@ class WindowManager:
         warnings: list[str] = []
 
         if not window_model or window_model == "unknown":
-            warnings.append("Window has unknown model - compatibility cannot be verified")
+            warnings.append(
+                "Window has unknown model - compatibility cannot be verified"
+            )
             return True, warnings
 
         # Get available models if not provided
@@ -758,10 +761,17 @@ class WindowManager:
             return True, warnings
 
         # Check for compatible variants (e.g., llama-3.1-8b vs llama-3.1-8b-instruct)
-        window_model_base = window_model.lower().replace("-instruct", "").replace("-chat", "")
+        window_model_base = (
+            window_model.lower().replace("-instruct", "").replace("-chat", "")
+        )
         for available in available_models:
-            available_base = available.lower().replace("-instruct", "").replace("-chat", "")
-            if window_model_base in available_base or available_base in window_model_base:
+            available_base = (
+                available.lower().replace("-instruct", "").replace("-chat", "")
+            )
+            if (
+                window_model_base in available_base
+                or available_base in window_model_base
+            ):
                 warnings.append(
                     f"Using compatible model variant: {available} (window used {window_model})"
                 )
@@ -845,7 +855,9 @@ class WindowManager:
             # Calculate how many tokens came from cache
             # This is a heuristic - actual cache hit detection requires vLLM metrics
             tokens_from_cache = max(0, expected_tokens - prompt_tokens)
-            cache_efficiency = tokens_from_cache / expected_tokens if expected_tokens > 0 else 0.0
+            cache_efficiency = (
+                tokens_from_cache / expected_tokens if expected_tokens > 0 else 0.0
+            )
             cache_hit = cache_efficiency > 0.5  # More than half from cache = hit
 
             logger.debug(
@@ -1082,7 +1094,7 @@ class AutoFreezeManager:
 
     def _generate_window_name(self, session_id: str) -> str:
         """Generate a unique window name based on policy pattern."""
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
         count = self._freeze_counts.get(session_id, 0) + 1
 
         return self.policy.window_name_pattern.format(
