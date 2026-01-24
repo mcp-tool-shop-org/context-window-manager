@@ -1,0 +1,104 @@
+# Context Window Manager
+
+> Lossless context restoration for LLM sessions via KV cache persistence
+
+## Overview
+
+Context Window Manager (CWM) is an MCP server that solves the context exhaustion problem. Instead of losing conversation history when context fills up, CWM freezes the actual KV cache tensors and restores them later with zero information loss.
+
+## Quick Start
+
+```bash
+pip install context-window-manager
+```
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "context-window-manager": {
+      "command": "python",
+      "args": ["-m", "context_window_manager"],
+      "env": {
+        "CWM_VLLM_URL": "http://localhost:8000"
+      }
+    }
+  }
+}
+```
+
+## How It Works
+
+```
+Traditional (Lossy):
+Context fills up → Summarize → Lose details
+
+CWM (Lossless):
+Context fills up → Freeze KV cache → Store tensors → Thaw
+                                                    ↓
+                            Exact restoration, zero loss
+```
+
+CWM leverages:
+- vLLM's prefix caching with `cache_salt` for session isolation
+- LMCache for tiered KV storage (GPU → CPU → Disk → Redis)
+- MCP protocol for Claude Code integration
+
+## MCP Tools
+
+### window_freeze(session_id, window_name, **kwargs)
+Freeze current context as a named window.
+- `session_id`: Session to freeze
+- `window_name`: Unique name for this window
+- `prompt_prefix`: Conversation prompt content
+- `description`: Human-readable description
+- Returns: Block count, storage size
+
+### window_thaw(window_name, **kwargs)
+Restore context from a frozen window.
+- `window_name`: Name of window to restore
+- `warm_cache`: Pre-warm cache by replaying prompt
+- `continuation_prompt`: Optional prompt to continue
+- Returns: cache_salt, cache_hit status, efficiency metrics
+
+### window_clone(source_window, new_window_name)
+Clone a window to explore different branches.
+- Creates independent copy sharing same cached blocks
+- Returns: Cloned window info with lineage
+
+### window_list(**filters)
+List available windows with filtering.
+- `tags`: Filter by tags
+- `model`: Filter by model name
+- `search`: Search names and descriptions
+- Returns: Window metadata with pagination
+
+### window_status(window_name)
+Get detailed window status.
+- Returns: Block counts, cache stats, lineage info
+
+### auto_freeze_config(**settings)
+Configure automatic context freezing.
+- `token_threshold`: Percentage to trigger freeze (default 0.75)
+- `cooldown_seconds`: Minimum between auto-freezes
+- Returns: Current configuration
+
+## Configuration
+
+Environment variables:
+- `CWM_VLLM_URL`: vLLM server URL
+- `CWM_LMCACHE_URL`: LMCache server URL (optional)
+- `CWM_STORAGE_PATH`: Path for window metadata
+- `CWM_AUTO_FREEZE`: Enable auto-freeze (true/false)
+
+## Links
+
+- Repository: https://github.com/mcp-tool-shop/context-window-manager
+- PyPI: https://pypi.org/project/context-window-manager/
+- Documentation: https://github.com/mcp-tool-shop/context-window-manager#readme
+- Issues: https://github.com/mcp-tool-shop/context-window-manager/issues
+
+## License
+
+MIT License
