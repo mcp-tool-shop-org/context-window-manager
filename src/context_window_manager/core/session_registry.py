@@ -33,6 +33,76 @@ logger = structlog.get_logger()
 
 
 # =============================================================================
+# SQL Safety Utilities
+# =============================================================================
+
+
+def escape_like_pattern(value: str) -> str:
+    """
+    Escape special characters for LIKE patterns.
+
+    SQL LIKE patterns treat % and _ as wildcards. This function escapes them
+    so they match literally when used with ESCAPE clause.
+
+    Args:
+        value: User input to use in LIKE pattern
+
+    Returns:
+        Escaped string safe for LIKE patterns
+    """
+    # Escape backslash first (it's our escape char), then wildcards
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def validate_sort_column(
+    sort_by: str,
+    allowed_columns: frozenset[str],
+    default: str = "created_at",
+) -> str:
+    """
+    Validate and sanitize sort column name.
+
+    Args:
+        sort_by: User-provided sort column
+        allowed_columns: Whitelist of valid column names
+        default: Default column if invalid
+
+    Returns:
+        Safe column name from allowlist
+    """
+    if sort_by in allowed_columns:
+        return sort_by
+    logger.warning(
+        "Invalid sort_by rejected",
+        attempted=sort_by,
+        allowed=list(allowed_columns),
+        fallback=default,
+    )
+    return default
+
+
+def validate_sort_order(sort_order: str) -> str:
+    """
+    Validate and sanitize sort order.
+
+    Args:
+        sort_order: User-provided sort order
+
+    Returns:
+        Either "ASC" or "DESC"
+    """
+    normalized = sort_order.strip().upper()
+    if normalized in ("ASC", "DESC"):
+        return normalized
+    logger.warning(
+        "Invalid sort_order rejected",
+        attempted=sort_order,
+        fallback="DESC",
+    )
+    return "DESC"
+
+
+# =============================================================================
 # Models
 # =============================================================================
 
@@ -754,6 +824,11 @@ class SessionRegistry:
         Returns:
             Tuple of (windows list, total count).
         """
+        # Allowed sort columns (immutable for safety)
+        ALLOWED_SORT_COLUMNS: frozenset[str] = frozenset({
+            "name", "created_at", "token_count", "total_size_bytes"
+        })
+
         # Build query
         query = "SELECT * FROM windows WHERE 1=1"
         count_query = "SELECT COUNT(*) FROM windows WHERE 1=1"
@@ -770,17 +845,21 @@ class SessionRegistry:
             params.append(session_id)
 
         if search:
-            query += " AND (name LIKE ? OR description LIKE ?)"
-            count_query += " AND (name LIKE ? OR description LIKE ?)"
-            search_pattern = f"%{search}%"
+            # Escape SQL wildcards in search input for literal matching
+            escaped_search = escape_like_pattern(search)
+            query += " AND (name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')"
+            count_query += " AND (name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')"
+            search_pattern = f"%{escaped_search}%"
             params.extend([search_pattern, search_pattern])
 
         # Tag filtering (using JSON)
         if tags:
             for tag in tags:
-                query += " AND tags LIKE ?"
-                count_query += " AND tags LIKE ?"
-                params.append(f'%"{tag}"%')
+                # Escape tag for JSON LIKE pattern
+                escaped_tag = escape_like_pattern(tag)
+                query += " AND tags LIKE ? ESCAPE '\\'"
+                count_query += " AND tags LIKE ? ESCAPE '\\'"
+                params.append(f'%"{escaped_tag}"%')
 
         # Get total count
         count_params = params.copy()
@@ -788,12 +867,12 @@ class SessionRegistry:
             row = await cursor.fetchone()
             total = row[0] if row else 0
 
-        # Sorting
-        allowed_sorts = {"name", "created_at", "token_count", "total_size_bytes"}
-        if sort_by not in allowed_sorts:
-            sort_by = "created_at"
-        order = "DESC" if sort_order.lower() == "desc" else "ASC"
-        query += f" ORDER BY {sort_by} {order}"
+        # Validate and sanitize sort parameters
+        safe_sort_by = validate_sort_column(sort_by, ALLOWED_SORT_COLUMNS, "created_at")
+        safe_order = validate_sort_order(sort_order)
+
+        # Deterministic sort: add secondary key (name) for stable ordering
+        query += f" ORDER BY {safe_sort_by} {safe_order}, name ASC"
 
         # Pagination
         query += " LIMIT ? OFFSET ?"

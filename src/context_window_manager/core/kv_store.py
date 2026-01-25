@@ -466,13 +466,64 @@ class DiskKVStore(KVStoreBackend):
         subdir = block_hash[:2]
         return self.storage_path / "meta" / subdir / f"{block_hash}.json"
 
+    async def _atomic_write(self, path: Path, data: bytes | str, mode: str = "wb") -> None:
+        """
+        Write data atomically using temp file + rename pattern.
+
+        This ensures that either the full file is written or nothing is,
+        protecting against partial writes from crashes or power loss.
+
+        Steps:
+        1. Write to a temp file in the same directory
+        2. Flush and fsync the file
+        3. Rename atomically to final path
+        """
+        import os
+        import uuid
+
+        # Ensure parent directory exists
+        await aiofiles.os.makedirs(path.parent, exist_ok=True)
+
+        # Create temp file in same directory (required for atomic rename)
+        temp_path = path.parent / f".{path.name}.{uuid.uuid4().hex[:8]}.tmp"
+
+        try:
+            # Write to temp file
+            async with aiofiles.open(temp_path, mode) as f:
+                if isinstance(data, str):
+                    await f.write(data)
+                else:
+                    await f.write(data)
+                # Flush to OS buffer
+                await f.flush()
+                # Sync to disk (critical for durability)
+                os.fsync(f.fileno())
+
+            # Atomic rename (POSIX guarantees this is atomic on same filesystem)
+            # On Windows, this may fail if target exists, so we remove first
+            if os.name == "nt" and path.exists():
+                await aiofiles.os.remove(path)
+            await aiofiles.os.rename(temp_path, path)
+
+        except Exception:
+            # Clean up temp file on failure
+            with contextlib.suppress(OSError):
+                await aiofiles.os.remove(temp_path)
+            raise
+
     async def store(
         self,
         blocks: dict[str, bytes],
         session_id: str,
         metadata: dict[str, Any] | None = None,
     ) -> StoreResult:
-        """Store blocks to disk."""
+        """
+        Store blocks to disk atomically.
+
+        Each block is written atomically using temp file + rename pattern.
+        This ensures that either a block is fully written or not at all,
+        protecting against partial writes from crashes or power loss.
+        """
         import json
 
         await self._ensure_initialized()
@@ -486,15 +537,7 @@ class DiskKVStore(KVStoreBackend):
                 block_path = self._block_path(block_hash)
                 meta_path = self._meta_path(block_hash)
 
-                # Ensure subdirectories exist
-                await aiofiles.os.makedirs(block_path.parent, exist_ok=True)
-                await aiofiles.os.makedirs(meta_path.parent, exist_ok=True)
-
-                # Write block data
-                async with aiofiles.open(block_path, "wb") as f:
-                    await f.write(data)
-
-                # Write metadata
+                # Prepare metadata
                 block_meta = BlockMetadata(
                     block_hash=block_hash,
                     size_bytes=len(data),
@@ -504,8 +547,16 @@ class DiskKVStore(KVStoreBackend):
                     layer_index=metadata.get("layer_index", 0) if metadata else 0,
                     backend=StorageBackend.DISK,
                 )
-                async with aiofiles.open(meta_path, "w") as f:
-                    await f.write(json.dumps(block_meta.to_dict()))
+
+                # Write block data atomically
+                await self._atomic_write(block_path, data, mode="wb")
+
+                # Write metadata atomically
+                await self._atomic_write(
+                    meta_path,
+                    json.dumps(block_meta.to_dict()),
+                    mode="w",
+                )
 
                 async with self._lock:
                     self._metrics.total_bytes_stored += len(data)

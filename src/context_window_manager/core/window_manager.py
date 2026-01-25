@@ -40,9 +40,21 @@ from context_window_manager.core.session_registry import (
     SessionState,
     Window,
 )
+from context_window_manager.core.storage_keys import (
+    METADATA_SCHEMA_VERSION,
+    check_schema_compatibility,
+    unwrap_metadata,
+    validate_session_id,
+    validate_window_name,
+    window_lineage_key,
+    window_metadata_key,
+    window_prompt_key,
+    wrap_metadata,
+)
 from context_window_manager.errors import (
     InvalidStateTransitionError,
     SessionNotFoundError,
+    ValidationError,
     WindowAlreadyExistsError,
     WindowNotFoundError,
 )
@@ -247,6 +259,10 @@ class WindowManager:
         """
         tags = tags or []
 
+        # Validate and normalize IDs before any operations
+        session_id = validate_session_id(session_id)
+        window_name = validate_window_name(window_name)
+
         log = logger.bind(session_id=session_id, window_name=window_name)
         log.info("Starting freeze operation")
 
@@ -355,6 +371,11 @@ class WindowManager:
         Returns:
             ThawResult with operation outcome and detailed metrics
         """
+        # Validate and normalize IDs before any operations
+        window_name = validate_window_name(window_name)
+        if new_session_id:
+            new_session_id = validate_session_id(new_session_id)
+
         log = logger.bind(window_name=window_name)
         log.info("Starting thaw operation")
 
@@ -481,6 +502,10 @@ class WindowManager:
         Returns:
             CloneResult with operation outcome
         """
+        # Validate and normalize IDs before any operations
+        source_window = validate_window_name(source_window)
+        new_window_name = validate_window_name(new_window_name)
+
         log = logger.bind(source_window=source_window, new_window_name=new_window_name)
         log.info("Starting clone operation")
 
@@ -550,24 +575,42 @@ class WindowManager:
         """Get the lineage (ancestry chain) for a window."""
         import json
 
-        lineage_key = f"window:{window_name}:lineage"
+        # Use centralized key naming
+        lineage_key = window_lineage_key(window_name)
         result = await self.kv_store.retrieve([lineage_key])
 
-        if result.found:
-            try:
-                return json.loads(result.found[lineage_key])
-            except (json.JSONDecodeError, KeyError):
-                pass
+        if not result.found:
+            return []
 
-        return []
+        try:
+            raw_data = result.found[lineage_key]
+            if isinstance(raw_data, bytes):
+                raw_data = raw_data.decode("utf-8")
+
+            envelope = json.loads(raw_data)
+
+            # Handle both wrapped (new) and unwrapped (legacy) formats
+            if "_schema_version" in envelope:
+                _, data = unwrap_metadata(envelope)
+                return data.get("lineage", [])
+            else:
+                # Legacy format: direct list
+                return envelope if isinstance(envelope, list) else []
+        except (json.JSONDecodeError, KeyError, ValidationError):
+            return []
 
     async def _store_window_lineage(self, window_name: str, lineage: list[str]) -> None:
         """Store the lineage for a window."""
         import json
 
-        lineage_key = f"window:{window_name}:lineage"
+        # Use centralized key naming
+        lineage_key = window_lineage_key(window_name)
+
+        # Wrap with schema version
+        envelope = wrap_metadata({"lineage": lineage})
+
         await self.kv_store.store(
-            blocks={lineage_key: json.dumps(lineage).encode()},
+            blocks={lineage_key: json.dumps(envelope).encode()},
             session_id=window_name,
         )
 
@@ -633,11 +676,15 @@ class WindowManager:
         Store block metadata for tracking purposes.
 
         Returns metadata about what was stored.
+
+        The metadata is wrapped with schema version info for forward compatibility.
         """
         import json
 
-        # Store a metadata record in our KV store
-        metadata_key = f"window:{window_name}:metadata"
+        # Use centralized key naming
+        metadata_key = window_metadata_key(window_name)
+
+        # Core metadata payload
         metadata = {
             "window_name": window_name,
             "cache_salt": cache_info.cache_salt,
@@ -645,12 +692,14 @@ class WindowManager:
             "token_count": cache_info.token_count,
             "block_count": cache_info.block_count,
             "block_hashes": cache_info.block_hashes,
-            "created_at": datetime.now(UTC).isoformat(),
         }
+
+        # Wrap with schema version and timestamp
+        envelope = wrap_metadata(metadata)
 
         # Store as dict of blocks (KV store API)
         await self.kv_store.store(
-            blocks={metadata_key: json.dumps(metadata).encode()},
+            blocks={metadata_key: json.dumps(envelope).encode()},
             session_id=window_name,
         )
 
@@ -665,43 +714,85 @@ class WindowManager:
         """Store the prompt prefix for later restoration."""
         import json
 
-        prompt_key = f"window:{window_name}:prompt"
+        # Use centralized key naming
+        prompt_key = window_prompt_key(window_name)
         prompt_data = {
             "prompt_prefix": prompt_prefix,
             "cache_salt": cache_salt,
         }
 
+        # Wrap with schema version
+        envelope = wrap_metadata(prompt_data)
+
         # Store as dict of blocks (KV store API)
         await self.kv_store.store(
-            blocks={prompt_key: json.dumps(prompt_data).encode()},
+            blocks={prompt_key: json.dumps(envelope).encode()},
             session_id=window_name,
         )
 
     async def _get_stored_cache_salt(self, window_name: str) -> str | None:
         """Retrieve the stored cache_salt for a window."""
-        prompt_key = f"window:{window_name}:prompt"
+        import json
+
+        # Use centralized key naming
+        prompt_key = window_prompt_key(window_name)
         result = await self.kv_store.retrieve([prompt_key])
 
-        if result.found:
-            import json
+        if not result.found:
+            return None
 
-            data = json.loads(result.found[prompt_key])
+        try:
+            raw_data = result.found[prompt_key]
+            if isinstance(raw_data, bytes):
+                raw_data = raw_data.decode("utf-8")
+
+            envelope = json.loads(raw_data)
+
+            # Handle both wrapped (new) and unwrapped (legacy) formats
+            if "_schema_version" in envelope:
+                _, data = unwrap_metadata(envelope)
+            else:
+                data = envelope
+
             return data.get("cache_salt")
-
-        return None
+        except (json.JSONDecodeError, KeyError, ValidationError):
+            logger.warning(
+                "Failed to retrieve cache_salt",
+                window_name=window_name,
+            )
+            return None
 
     async def _get_stored_prompt(self, window_name: str) -> str | None:
         """Retrieve the stored prompt prefix for a window."""
-        prompt_key = f"window:{window_name}:prompt"
+        import json
+
+        # Use centralized key naming
+        prompt_key = window_prompt_key(window_name)
         result = await self.kv_store.retrieve([prompt_key])
 
-        if result.found:
-            import json
+        if not result.found:
+            return None
 
-            data = json.loads(result.found[prompt_key])
+        try:
+            raw_data = result.found[prompt_key]
+            if isinstance(raw_data, bytes):
+                raw_data = raw_data.decode("utf-8")
+
+            envelope = json.loads(raw_data)
+
+            # Handle both wrapped (new) and unwrapped (legacy) formats
+            if "_schema_version" in envelope:
+                _, data = unwrap_metadata(envelope)
+            else:
+                data = envelope
+
             return data.get("prompt_prefix")
-
-        return None
+        except (json.JSONDecodeError, KeyError, ValidationError):
+            logger.warning(
+                "Failed to retrieve prompt",
+                window_name=window_name,
+            )
+            return None
 
     def _derive_cache_salt(self, window: Window) -> str:
         """
@@ -782,23 +873,58 @@ class WindowManager:
         )
         return False, warnings
 
+    # Track windows with corrupted metadata to log once per window per process
+    _corrupted_metadata_logged: set[str] = set()
+
     async def _verify_stored_blocks(self, window_name: str) -> tuple[int, int]:
         """
         Verify that stored blocks for a window are available.
 
         Returns (blocks_expected, blocks_found).
+
+        Behavior:
+        - Returns (0, 0) if metadata doesn't exist (normal case for new windows)
+        - Returns (0, 0) and logs warning if metadata is corrupted (once per window)
+        - Returns (0, 0) and logs warning if schema version is incompatible
+        - Returns (expected, found) for valid metadata
+
+        This method is designed to be safe and never raise exceptions.
+        All error cases return a documented safe value and log appropriately.
         """
-        # Get block metadata
-        metadata_key = f"window:{window_name}:metadata"
+        import json
+
+        # Use centralized key naming
+        metadata_key = window_metadata_key(window_name)
         result = await self.kv_store.retrieve([metadata_key])
 
         if not result.found:
             return 0, 0
 
-        import json
-
         try:
-            metadata = json.loads(result.found[metadata_key])
+            raw_metadata = result.found[metadata_key]
+
+            # Handle bytes vs string
+            if isinstance(raw_metadata, bytes):
+                raw_metadata = raw_metadata.decode("utf-8")
+
+            envelope = json.loads(raw_metadata)
+
+            # Check schema version compatibility
+            schema_version, metadata = unwrap_metadata(envelope)
+            is_compatible, warning = check_schema_compatibility(schema_version)
+
+            if not is_compatible:
+                # Log once per window per process to avoid spam
+                if window_name not in self._corrupted_metadata_logged:
+                    self._corrupted_metadata_logged.add(window_name)
+                    logger.warning(
+                        "Incompatible metadata schema version",
+                        window_name=window_name,
+                        stored_version=schema_version,
+                        warning=warning,
+                    )
+                return 0, 0
+
             block_hashes = metadata.get("block_hashes", [])
             blocks_expected = len(block_hashes)
 
@@ -811,8 +937,38 @@ class WindowManager:
 
             return blocks_expected, blocks_found
 
-        except (json.JSONDecodeError, KeyError) as e:
-            logger.warning("Could not parse block metadata", error=str(e))
+        except json.JSONDecodeError as e:
+            # Corrupted JSON - log once per window to avoid spam
+            if window_name not in self._corrupted_metadata_logged:
+                self._corrupted_metadata_logged.add(window_name)
+                logger.warning(
+                    "Corrupted window metadata JSON",
+                    window_name=window_name,
+                    key=metadata_key,
+                    error=str(e),
+                )
+            return 0, 0
+
+        except (KeyError, TypeError, ValidationError) as e:
+            # Malformed metadata structure - log once
+            if window_name not in self._corrupted_metadata_logged:
+                self._corrupted_metadata_logged.add(window_name)
+                logger.warning(
+                    "Malformed window metadata structure",
+                    window_name=window_name,
+                    key=metadata_key,
+                    error=str(e),
+                )
+            return 0, 0
+
+        except Exception as e:
+            # Unexpected error - always log these
+            logger.error(
+                "Unexpected error verifying stored blocks",
+                window_name=window_name,
+                error=str(e),
+                exc_info=True,
+            )
             return 0, 0
 
     async def _warm_cache(
