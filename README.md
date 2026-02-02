@@ -2,12 +2,12 @@
 
 > **Lossless context restoration for LLM sessions via KV cache persistence**
 
-[![CI](https://github.com/mcp-tool-shop/context-window-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/mcp-tool-shop/context-window-manager/actions/workflows/ci.yml)
+[![CI](https://github.com/mcp-tool-shop-org/context-window-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/mcp-tool-shop-org/context-window-manager/actions/workflows/ci.yml)
 [![PyPI version](https://badge.fury.io/py/context-window-manager.svg)](https://badge.fury.io/py/context-window-manager)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/tests-366%20passed-brightgreen.svg)](https://github.com/mcp-tool-shop/context-window-manager)
+[![Tests](https://img.shields.io/badge/tests-366%20passed-brightgreen.svg)](https://github.com/mcp-tool-shop-org/context-window-manager)
 
 ---
 
