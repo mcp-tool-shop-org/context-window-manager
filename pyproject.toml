@@ -1,6 +1,6 @@
 [project]
-name = "context-window-manager"
-version = "0.6.2"
+name = "cwm-mcp"
+version = "0.6.3"
 description = "MCP server for lossless LLM context restoration via KV cache persistence"
 readme = "README.md"
 license = {text = "MIT"}
@@ -36,7 +36,7 @@ redis = ["redis>=5.0.0"]
 lmcache = ["lmcache>=0.1.0"]
 encryption = ["cryptography>=41.0.0"]
 all = [
-    "context-window-manager[redis,lmcache,encryption]",
+    "cwm-mcp[redis,lmcache,encryption]",
 ]
 
 dev = [
@@ -64,11 +64,11 @@ dev = [
 cwm = "context_window_manager.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/mcp-tool-shop/context-window-manager"
-Documentation = "https://github.com/mcp-tool-shop/context-window-manager/blob/main/docs/USER_GUIDE.md"
-Repository = "https://github.com/mcp-tool-shop/context-window-manager"
-Issues = "https://github.com/mcp-tool-shop/context-window-manager/issues"
-Changelog = "https://github.com/mcp-tool-shop/context-window-manager/blob/main/RELEASE_NOTES.md"
+Homepage = "https://github.com/mcp-tool-shop-org/context-window-manager"
+Documentation = "https://github.com/mcp-tool-shop-org/context-window-manager/blob/main/docs/USER_GUIDE.md"
+Repository = "https://github.com/mcp-tool-shop-org/context-window-manager"
+Issues = "https://github.com/mcp-tool-shop-org/context-window-manager/issues"
+Changelog = "https://github.com/mcp-tool-shop-org/context-window-manager/blob/main/RELEASE_NOTES.md"
 
 [build-system]
 requires = ["hatchling"]
