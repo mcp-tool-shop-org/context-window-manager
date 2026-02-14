@@ -1,104 +1,44 @@
 # Context Window Manager
 
-> Lossless context restoration for LLM sessions via KV cache persistence
+> Lossless context restoration for LLM sessions via KV cache persistence.
 
-## Overview
+## Purpose
+CWM is an MCP server that solves context exhaustion in LLM applications. It freezes KV cache tensors to persistent storage and thaws them back with zero information loss. Unlike summarization or RAG, it preserves actual KV cache state using vLLM prefix caching and LMCache tiered storage.
 
-Context Window Manager (CWM) is an MCP server that solves the context exhaustion problem. Instead of losing conversation history when context fills up, CWM freezes the actual KV cache tensors and restores them later with zero information loss.
-
-## Quick Start
-
+## Quickstart
 ```bash
 pip install context-window-manager
 ```
-
-Add to `claude_desktop_config.json`:
-
+Add to `.claude/settings.json`:
 ```json
 {
   "mcpServers": {
     "context-window-manager": {
       "command": "python",
       "args": ["-m", "context_window_manager"],
-      "env": {
-        "CWM_VLLM_URL": "http://localhost:8000"
-      }
+      "env": { "CWM_VLLM_URL": "http://localhost:8000" }
     }
   }
 }
 ```
 
-## How It Works
+## Key MCP Tools
+- `window_freeze <session_id> <name>` -- snapshot session context to storage
+- `window_thaw <name>` -- restore context from a saved window
+- `window_list` -- list all saved context windows
+- `window_status <name>` -- detailed session/window info
+- `window_clone <source> <new_name>` -- branch a context for exploration
+- `window_delete <name>` -- remove a saved window
+- `auto_freeze_config` -- configure automatic freezing thresholds
+- `auto_freeze_check` -- trigger auto-freeze if thresholds exceeded
 
-```
-Traditional (Lossy):
-Context fills up → Summarize → Lose details
-
-CWM (Lossless):
-Context fills up → Freeze KV cache → Store tensors → Thaw
-                                                    ↓
-                            Exact restoration, zero loss
-```
-
-CWM leverages:
-- vLLM's prefix caching with `cache_salt` for session isolation
-- LMCache for tiered KV storage (GPU → CPU → Disk → Redis)
-- MCP protocol for Claude Code integration
-
-## MCP Tools
-
-### window_freeze(session_id, window_name, **kwargs)
-Freeze current context as a named window.
-- `session_id`: Session to freeze
-- `window_name`: Unique name for this window
-- `prompt_prefix`: Conversation prompt content
-- `description`: Human-readable description
-- Returns: Block count, storage size
-
-### window_thaw(window_name, **kwargs)
-Restore context from a frozen window.
-- `window_name`: Name of window to restore
-- `warm_cache`: Pre-warm cache by replaying prompt
-- `continuation_prompt`: Optional prompt to continue
-- Returns: cache_salt, cache_hit status, efficiency metrics
-
-### window_clone(source_window, new_window_name)
-Clone a window to explore different branches.
-- Creates independent copy sharing same cached blocks
-- Returns: Cloned window info with lineage
-
-### window_list(**filters)
-List available windows with filtering.
-- `tags`: Filter by tags
-- `model`: Filter by model name
-- `search`: Search names and descriptions
-- Returns: Window metadata with pagination
-
-### window_status(window_name)
-Get detailed window status.
-- Returns: Block counts, cache stats, lineage info
-
-### auto_freeze_config(**settings)
-Configure automatic context freezing.
-- `token_threshold`: Percentage to trigger freeze (default 0.75)
-- `cooldown_seconds`: Minimum between auto-freezes
-- Returns: Current configuration
-
-## Configuration
-
-Environment variables:
-- `CWM_VLLM_URL`: vLLM server URL
-- `CWM_LMCACHE_URL`: LMCache server URL (optional)
-- `CWM_STORAGE_PATH`: Path for window metadata
-- `CWM_AUTO_FREEZE`: Enable auto-freeze (true/false)
+## Constraints
+- Requires vLLM server with `--enable-prefix-caching` and LMCache connector
+- Requires LMCache environment (`LMCACHE_USE_EXPERIMENTAL=True`, `LMCACHE_LOCAL_CPU=True`)
+- Python 3.11+ required
+- Storage tiers: CPU memory -> Disk -> Redis (auto-managed)
+- Each session isolated via unique `cache_salt`; no cross-session data leakage
 
 ## Links
-
-- Repository: https://github.com/mcp-tool-shop/context-window-manager
+- Repo: https://github.com/mcp-tool-shop-org/context-window-manager
 - PyPI: https://pypi.org/project/context-window-manager/
-- Documentation: https://github.com/mcp-tool-shop/context-window-manager#readme
-- Issues: https://github.com/mcp-tool-shop/context-window-manager/issues
-
-## License
-
-MIT License
