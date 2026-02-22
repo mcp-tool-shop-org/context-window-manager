@@ -163,7 +163,7 @@ class TestSchemaVersioning:
 
     def test_check_schema_compatibility_min_supported(self):
         """Minimum supported version should be compatible."""
-        is_compatible, warning = check_schema_compatibility(MIN_SUPPORTED_SCHEMA_VERSION)
+        is_compatible, _warning = check_schema_compatibility(MIN_SUPPORTED_SCHEMA_VERSION)
 
         assert is_compatible is True
 

@@ -559,7 +559,7 @@ def is_retryable(error: Exception) -> bool:
     )
 
 
-def get_retry_delay(error: Exception, attempt: int, base_delay: float = 1.0) -> float:
+def get_retry_delay(_error: Exception, attempt: int, base_delay: float = 1.0) -> float:
     """
     Calculate exponential backoff delay for retry.
 

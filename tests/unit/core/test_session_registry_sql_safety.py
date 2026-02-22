@@ -213,5 +213,5 @@ class TestListWindowsSQLSafety:
         assert len(windows) == 0
 
         # Verify tables still exist by fetching all
-        all_windows, all_total = await registry.list_windows()
+        _all_windows, all_total = await registry.list_windows()
         assert all_total == 3

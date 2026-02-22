@@ -20,7 +20,6 @@ from typing import Final
 
 from context_window_manager.errors import ValidationError
 
-
 # =============================================================================
 # Schema Versioning
 # =============================================================================
