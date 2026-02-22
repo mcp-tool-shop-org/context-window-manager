@@ -13,7 +13,7 @@ import contextlib
 import hashlib
 import time
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 logger = structlog.get_logger()
 
 
-class StorageBackend(str, Enum):
+class StorageBackend(StrEnum):
     """Available storage backends."""
 
     MEMORY = "memory"

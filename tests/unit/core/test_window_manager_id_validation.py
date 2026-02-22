@@ -5,7 +5,7 @@ Goal: Ensure freeze/thaw/clone reject malformed IDs at the boundary.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 

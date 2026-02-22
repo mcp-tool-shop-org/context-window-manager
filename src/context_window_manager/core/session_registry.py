@@ -14,7 +14,7 @@ import hashlib
 import json
 import secrets
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -107,7 +107,7 @@ def validate_sort_order(sort_order: str) -> str:
 # =============================================================================
 
 
-class SessionState(str, Enum):
+class SessionState(StrEnum):
     """Session lifecycle states."""
 
     ACTIVE = "active"  # Session is being used

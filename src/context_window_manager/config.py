@@ -8,7 +8,7 @@ Supports:
 - Runtime updates for allowed fields
 """
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
@@ -16,7 +16,7 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class LogLevel(str, Enum):
+class LogLevel(StrEnum):
     """Log level options."""
 
     DEBUG = "DEBUG"

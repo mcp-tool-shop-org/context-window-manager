@@ -98,7 +98,7 @@ def get_state() -> ServerState:
 
 
 @asynccontextmanager
-async def lifespan(app: FastMCP) -> AsyncIterator[None]:
+async def lifespan(_app: FastMCP) -> AsyncIterator[None]:
     """Manage server lifecycle - initialize and cleanup resources."""
     global _state
 
