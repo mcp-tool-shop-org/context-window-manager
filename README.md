@@ -165,7 +165,7 @@ export LMCACHE_MAX_LOCAL_CPU_SIZE=8.0
 
 ```bash
 # Clone and setup
-git clone https://github.com/your-org/context-window-manager.git
+git clone https://github.com/mcp-tool-shop-org/context-window-manager.git
 cd context-window-manager
 python -m venv .venv
 .venv\Scripts\activate  # Windows
@@ -214,4 +214,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Status
 
-**Beta (v0.6.2)** - Production hardening complete. Ready for testing. 366 tests passing.
+**Beta (v0.6.4)** - Production hardening complete. CI consolidated (2 workflows). 366 tests passing.
