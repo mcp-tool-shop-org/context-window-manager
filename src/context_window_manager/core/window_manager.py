@@ -29,7 +29,7 @@ import hashlib
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import structlog
 
@@ -41,7 +41,6 @@ from context_window_manager.core.session_registry import (
     Window,
 )
 from context_window_manager.core.storage_keys import (
-    METADATA_SCHEMA_VERSION,
     check_schema_compatibility,
     unwrap_metadata,
     validate_session_id,
@@ -874,7 +873,7 @@ class WindowManager:
         return False, warnings
 
     # Track windows with corrupted metadata to log once per window per process
-    _corrupted_metadata_logged: set[str] = set()
+    _corrupted_metadata_logged: ClassVar[set[str]] = set()
 
     async def _verify_stored_blocks(self, window_name: str) -> tuple[int, int]:
         """

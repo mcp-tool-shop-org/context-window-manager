@@ -188,17 +188,17 @@ def sanitize_tags(tags: list[str] | None) -> list[str]:
         if not isinstance(tag, str):
             raise InvalidParameterError("tags", "All tags must be strings")
 
-        tag = tag.strip().lower()
-        if not tag:
+        cleaned = tag.strip().lower()
+        if not cleaned:
             continue
 
-        if len(tag) > MAX_TAG_LENGTH:
-            raise InvalidParameterError("tags", f"Tag too long: {tag[:20]}...")
+        if len(cleaned) > MAX_TAG_LENGTH:
+            raise InvalidParameterError("tags", f"Tag too long: {cleaned[:20]}...")
 
-        if not SAFE_ID_PATTERN.match(tag):
-            raise InvalidParameterError("tags", f"Invalid tag format: {tag}")
+        if not SAFE_ID_PATTERN.match(cleaned):
+            raise InvalidParameterError("tags", f"Invalid tag format: {cleaned}")
 
-        sanitized.append(tag)
+        sanitized.append(cleaned)
 
     return sanitized
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import secrets
 from datetime import UTC, datetime
 from enum import Enum
@@ -266,8 +267,6 @@ class Window:
 # =============================================================================
 
 # Validation patterns
-import re
-
 SESSION_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 WINDOW_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,128}$")
 

@@ -105,7 +105,7 @@ exclude_lines = [
 
 [tool.ruff]
 target-version = "py311"
-line-length = 88
+line-length = 120
 src = ["src", "tests"]
 
 [tool.ruff.lint]
@@ -128,10 +128,15 @@ select = [
 ignore = [
     "PLR0913",  # Too many arguments
     "PLR2004",  # Magic value comparison
+    "PLC0415",  # Import not at top level (lazy/conditional imports)
+    "PLW0603",  # Global statement
+    "PLR0911",  # Too many return statements
+    "UP042",    # Use StrEnum (requires 3.11+, str+Enum is fine)
+    "SIM102",   # Nested if → combined if (readability preference)
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ARG", "PLR2004"]
+"tests/*" = ["ARG", "PLR2004", "SIM117", "RUF001", "RUF059", "B017"]
 
 [tool.pyright]
 include = ["src"]

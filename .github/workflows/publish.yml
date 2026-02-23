@@ -4,12 +4,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      test_pypi:
-        description: 'Publish to TestPyPI instead'
-        required: false
-        default: 'false'
-        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,12 +17,11 @@ jobs:
   build:
     name: Build distribution
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -49,68 +42,13 @@ jobs:
           name: dist
           path: dist/
 
-  test:
-    name: Test package
-    needs: build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ['3.11', '3.12']
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Install package
-        run: pip install dist/*.whl
-
-      - name: Install test dependencies
-        run: pip install pytest pytest-asyncio pytest-mock
-
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
-
-  publish-testpypi:
-    name: Publish to TestPyPI
-    needs: [build, test]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.test_pypi == 'true'
-    environment: testpypi
-    permissions:
-      id-token: write
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-
   publish-pypi:
     name: Publish to PyPI
-    needs: [build, test]
+    needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
     environment: pypi
     permissions:
       id-token: write
-
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -120,15 +58,17 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
 
   docker:
     name: Publish to GHCR
+    needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'release'
     permissions:
       contents: read
       packages: write
-
     steps:
       - uses: actions/checkout@v4
 

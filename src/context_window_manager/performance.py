@@ -99,7 +99,8 @@ class ConnectionPool(Generic[T]):
             conn, timestamp = self._pool.get_nowait()
 
             # Check if connection is still valid
-            if time.time() - timestamp > self.config.max_idle_time or (self.validator and not await self.validator(conn)):
+            idle = time.time() - timestamp > self.config.max_idle_time
+            if idle or (self.validator and not await self.validator(conn)):
                 await self._close_connection(conn)
             else:
                 return conn
@@ -556,10 +557,7 @@ def cached(
         @functools.wraps(func)
         async def wrapper(*args, **kwargs) -> T:
             # Generate cache key
-            if key_fn:
-                key = key_fn(*args, **kwargs)
-            else:
-                key = f"{func.__name__}:{args}:{kwargs}"
+            key = key_fn(*args, **kwargs) if key_fn else f"{func.__name__}:{args}:{kwargs}"
 
             # Try cache
             result = await cache.get(key)

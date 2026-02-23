@@ -6,9 +6,6 @@ partial writes from crashes or power loss.
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 import pytest
 
 from context_window_manager.core.kv_store import DiskKVStore
