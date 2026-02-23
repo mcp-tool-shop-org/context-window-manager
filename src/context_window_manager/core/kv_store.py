@@ -489,7 +489,7 @@ class DiskKVStore(KVStoreBackend):
 
         try:
             # Write to temp file
-            async with aiofiles.open(temp_path, mode) as f:
+            async with aiofiles.open(temp_path, mode) as f:  # type: ignore[call-overload]
                 if isinstance(data, str):
                     await f.write(data)
                 else:

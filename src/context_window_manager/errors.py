@@ -535,13 +535,13 @@ def classify_error(error: Exception) -> CWMError:
             str(error.filename) if hasattr(error, "filename") else "unknown",
         )
     if isinstance(error, (OSError, IOError)):
-        return StorageError.__class__(f"I/O error: {error_msg}")
+        return StorageError(f"I/O error: {error_msg}")
     if isinstance(error, MemoryError):
         return MemoryExhaustedError(0, 0)
     if "timeout" in error_type.lower() or "timeout" in error_msg.lower():
         return OperationTimeoutError("unknown", 0)
     if "connection" in error_type.lower() or "connection" in error_msg.lower():
-        return ConnectionError.__class__(f"Connection error: {error_msg}")
+        return InternalError(f"Connection error: {error_msg}")
 
     # Default to internal error for unknown exceptions
     return InternalError(f"Unexpected error: {error_type}: {error_msg}")
