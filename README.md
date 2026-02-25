@@ -1,13 +1,19 @@
-# Context Window Manager
+<p align="center">
+  <a href="README.ja.md">日本語</a> | <a href="README.zh.md">中文</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.hi.md">हिन्दी</a> | <a href="README.it.md">Italiano</a> | <a href="README.pt-BR.md">Português (BR)</a>
+</p>
+
+<p align="center">
+  <img src="assets/logo.png" alt="Context Window Manager" width="400">
+</p>
+
+<p align="center">
+  <a href="https://github.com/mcp-tool-shop-org/context-window-manager/actions/workflows/ci.yml"><img src="https://github.com/mcp-tool-shop-org/context-window-manager/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://pypi.org/project/cwm-mcp/"><img src="https://img.shields.io/pypi/v/cwm-mcp" alt="PyPI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
+  <a href="https://mcp-tool-shop-org.github.io/context-window-manager/"><img src="https://img.shields.io/badge/Landing_Page-live-blue" alt="Landing Page"></a>
+</p>
 
 > **Lossless context restoration for LLM sessions via KV cache persistence**
-
-[![CI](https://github.com/mcp-tool-shop-org/context-window-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/mcp-tool-shop-org/context-window-manager/actions/workflows/ci.yml)
-[![PyPI version](https://badge.fury.io/py/context-window-manager.svg)](https://badge.fury.io/py/context-window-manager)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/tests-366%20passed-brightgreen.svg)](https://github.com/mcp-tool-shop-org/context-window-manager)
 
 ---
 
@@ -58,7 +64,7 @@ CWM leverages:
 ### Installation
 
 ```bash
-pip install context-window-manager
+pip install cwm-mcp
 ```
 
 ### Configuration

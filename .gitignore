@@ -112,8 +112,9 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
-# mkdocs documentation
-/site
+# mkdocs documentation (built output only — site/ source is tracked for Astro landing page)
+site/dist/
+site/node_modules/
 
 # mypy
 .mypy_cache/
@@ -144,3 +145,4 @@ Thumbs.db
 *.db
 *.sqlite
 .cwm/
+site/.astro/
