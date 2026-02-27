@@ -1,6 +1,6 @@
 [project]
 name = "cwm-mcp"
-version = "0.6.5"
+version = "1.0.0"
 description = "MCP server for lossless LLM context restoration via KV cache persistence"
 readme = "README.md"
 license = {text = "MIT"}
@@ -10,7 +10,7 @@ authors = [
 ]
 keywords = ["mcp", "llm", "vllm", "context", "kv-cache", "lmcache"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: Microsoft :: Windows",

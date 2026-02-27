@@ -220,4 +220,33 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Status
 
-**Beta (v0.6.4)** - Production hardening complete. CI consolidated (2 workflows). 366 tests passing.
+**v1.0.0** - Production release. CI consolidated (2 workflows). 366 tests passing.
+
+---
+
+## Security & Data Scope
+
+Context Window Manager is a **local-first** MCP server for KV cache persistence.
+
+- **Data accessed:** Reads/writes KV cache snapshots to local SQLite. Communicates with local vLLM server for cache operations.
+- **Data NOT accessed:** No telemetry. No cloud services. No credential storage. Cache data stays on-machine.
+- **Permissions:** File system read/write for SQLite database. Network access to local vLLM server only.
+
+Full policy: [SECURITY.md](SECURITY.md)
+
+---
+
+## Scorecard
+
+| Category | Score |
+|----------|-------|
+| A. Security | 10/10 |
+| B. Error Handling | 10/10 |
+| C. Operator Docs | 10/10 |
+| D. Shipping Hygiene | 10/10 |
+| E. Identity (soft) | 10/10 |
+| **Overall** | **50/50** |
+
+---
+
+Built by <a href="https://mcp-tool-shop.github.io/">MCP Tool Shop</a>

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-02-27
+
+### Added
+- SECURITY.md with vulnerability reporting and data scope
+- SHIP_GATE.md quality gates (all hard gates pass)
+- SCORECARD.md with pre/post remediation scores
+- Security & Data Scope section in README
+
+### Changed
+- Promoted from v0.6.4 to v1.0.0 (stable release)
+- Development Status classifier updated to Production/Stable
+
 ## [0.6.2] - 2026-01-24
 
 ### Added
