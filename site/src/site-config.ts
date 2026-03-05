@@ -17,7 +17,7 @@ export const config: SiteConfig = {
     description:
       "Context Window Manager is an MCP server that solves the context exhaustion problem. Freeze your KV cache tensors to persistent storage and thaw them later with exact restoration — no summarization, no RAG, no missing details.",
     primaryCta: { href: "#get-started", label: "Get started" },
-    secondaryCta: { href: "#how-it-works", label: "How it works" },
+    secondaryCta: { href: "handbook/", label: "Read the Handbook" },
     previews: [
       {
         label: "Install",
